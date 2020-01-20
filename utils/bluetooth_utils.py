@@ -31,10 +31,16 @@ from errno import EALREADY
 # import PyBluez
 import bluetooth._bluetooth as bluez
 
-__all__ = ('toggle_device', 'set_scan',
-           'enable_le_scan', 'disable_le_scan', 'parse_le_advertising_events',
-           'start_le_advertising', 'stop_le_advertising',
-           'raw_packet_to_str')
+__all__ = (
+    "toggle_device",
+    "set_scan",
+    "enable_le_scan",
+    "disable_le_scan",
+    "parse_le_advertising_events",
+    "start_le_advertising",
+    "stop_le_advertising",
+    "raw_packet_to_str",
+)
 
 LE_META_EVENT = 0x3E
 LE_PUBLIC_ADDRESS = 0x00
@@ -85,18 +91,18 @@ def toggle_device(dev_id, enable):
     :param enable: Whether to enable of disable the device.
     :type enable: ``bool``
     """
-    hci_sock = socket.socket(socket.AF_BLUETOOTH,
-                             socket.SOCK_RAW,
-                             socket.BTPROTO_HCI)
+    hci_sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_RAW, socket.BTPROTO_HCI)
     # print("Power %s bluetooth device %d" % ('ON' if enable else 'OFF', dev_id))
     # di = struct.pack("HbBIBBIIIHHHH10I", dev_id, *((0,) * 22))
     # fcntl.ioctl(hci_sock.fileno(), bluez.HCIGETDEVINFO, di)
     req_str = struct.pack("H", dev_id)
     request = array.array("b", req_str)
     try:
-        fcntl.ioctl(hci_sock.fileno(),
-                    bluez.HCIDEVUP if enable else bluez.HCIDEVDOWN,
-                    request[0])
+        fcntl.ioctl(
+            hci_sock.fileno(),
+            bluez.HCIDEVUP if enable else bluez.HCIDEVDOWN,
+            request[0],
+        )
     except IOError as e:
         if e.errno == EALREADY:
             pass
@@ -127,9 +133,7 @@ def set_scan(dev_id, scan_type):
         ``'piscan'``
     :type scan_type: ``str``
     """
-    hci_sock = socket.socket(socket.AF_BLUETOOTH,
-                             socket.SOCK_RAW,
-                             socket.BTPROTO_HCI)
+    hci_sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_RAW, socket.BTPROTO_HCI)
     if scan_type == "noscan":
         dev_opt = SCAN_DISABLED
     elif scan_type == "iscan":
@@ -154,14 +158,18 @@ def raw_packet_to_str(pkt):
     Returns the string representation of a raw HCI packet.
     """
     if sys.version_info > (3, 0):
-        return ''.join('%02x' % struct.unpack("B", bytes([x]))[0] for x in pkt)
+        return "".join("%02x" % struct.unpack("B", bytes([x]))[0] for x in pkt)
     else:
-        return ''.join('%02x' % struct.unpack("B", x)[0] for x in pkt)
+        return "".join("%02x" % struct.unpack("B", x)[0] for x in pkt)
 
 
-def enable_le_scan(sock, interval=0x0800, window=0x0800,
-                   filter_policy=FILTER_POLICY_NO_WHITELIST,
-                   filter_duplicates=True):
+def enable_le_scan(
+    sock,
+    interval=0x0800,
+    window=0x0800,
+    filter_policy=FILTER_POLICY_NO_WHITELIST,
+    filter_duplicates=True,
+):
     """
     Enable LE passive scan (with filtering of duplicate packets enabled).
 
@@ -180,8 +188,9 @@ def enable_le_scan(sock, interval=0x0800, window=0x0800,
     """
     # print("Enable LE scan")
     own_bdaddr_type = LE_PUBLIC_ADDRESS  # does not work with LE_RANDOM_ADDRESS
-    cmd_pkt = struct.pack("<BHHBB", SCAN_TYPE_PASSIVE, interval, window,
-                          own_bdaddr_type, filter_policy)
+    cmd_pkt = struct.pack(
+        "<BHHBB", SCAN_TYPE_PASSIVE, interval, window, own_bdaddr_type, filter_policy
+    )
     bluez.hci_send_cmd(sock, OGF_LE_CTL, OCF_LE_SET_SCAN_PARAMETERS, cmd_pkt)
     # print("scan params: interval=%.3fms window=%.3fms own_bdaddr=%s "
     #       "whitelist=%s" %
@@ -190,7 +199,9 @@ def enable_le_scan(sock, interval=0x0800, window=0x0800,
     #        'yes' if filter_policy in (FILTER_POLICY_SCAN_WHITELIST,
     #                                   FILTER_POLICY_SCAN_AND_CONN_WHITELIST)
     #        else 'no'))
-    cmd_pkt = struct.pack("<BB", SCAN_ENABLE, SCAN_FILTER_DUPLICATES if filter_duplicates else 0x00)
+    cmd_pkt = struct.pack(
+        "<BB", SCAN_ENABLE, SCAN_FILTER_DUPLICATES if filter_duplicates else 0x00
+    )
     bluez.hci_send_cmd(sock, OGF_LE_CTL, OCF_LE_SET_SCAN_ENABLE, cmd_pkt)
 
 
@@ -206,8 +217,9 @@ def disable_le_scan(sock):
     bluez.hci_send_cmd(sock, OGF_LE_CTL, OCF_LE_SET_SCAN_ENABLE, cmd_pkt)
 
 
-def start_le_advertising(sock, min_interval=1000, max_interval=1000,
-                         adv_type=ADV_NONCONN_IND, data=()):
+def start_le_advertising(
+    sock, min_interval=1000, max_interval=1000, adv_type=ADV_NONCONN_IND, data=()
+):
     """
     Start LE advertising.
 
@@ -225,22 +237,25 @@ def start_le_advertising(sock, min_interval=1000, max_interval=1000,
     chan_map = 0x07  # All channels: 37, 38, 39
     filter = 0
 
-    struct_params = [min_interval, max_interval, adv_type, own_bdaddr_type,
-                     direct_bdaddr_type]
+    struct_params = [
+        min_interval,
+        max_interval,
+        adv_type,
+        own_bdaddr_type,
+        direct_bdaddr_type,
+    ]
     struct_params.extend(direct_bdaddr)
     struct_params.extend((chan_map, filter))
 
     cmd_pkt = struct.pack("<HHBBB6BBB", *struct_params)
-    bluez.hci_send_cmd(sock, OGF_LE_CTL, OCF_LE_SET_ADVERTISING_PARAMETERS,
-                       cmd_pkt)
+    bluez.hci_send_cmd(sock, OGF_LE_CTL, OCF_LE_SET_ADVERTISING_PARAMETERS, cmd_pkt)
 
     cmd_pkt = struct.pack("<B", 0x01)
     bluez.hci_send_cmd(sock, OGF_LE_CTL, OCF_LE_SET_ADVERTISE_ENABLE, cmd_pkt)
 
     data_length = len(data)
     if data_length > 31:
-        raise ValueError("data is too long (%d but max is 31 bytes)",
-                         data_length)
+        raise ValueError("data is too long (%d but max is 31 bytes)", data_length)
     cmd_pkt = struct.pack("<B%dB" % data_length, data_length, *data)
     bluez.hci_send_cmd(sock, OGF_LE_CTL, OCF_LE_SET_ADVERTISING_DATA, cmd_pkt)
     # print("Advertising started data_length=%d data=%r" % (data_length, data))
@@ -258,8 +273,9 @@ def stop_le_advertising(sock):
     # print("Advertising stopped")
 
 
-def parse_le_advertising_events(sock, mac_addr=None, packet_length=None,
-                                handler=None, debug=False):
+def parse_le_advertising_events(
+    sock, mac_addr=None, packet_length=None, handler=None, debug=False
+):
     """
     Parse and report LE advertisements.
 
@@ -311,7 +327,7 @@ def parse_le_advertising_events(sock, mac_addr=None, packet_length=None,
                 print("Not a LE_META_EVENT !")
                 continue
 
-            sub_event, = struct.unpack("B", pkt[3:4])
+            (sub_event,) = struct.unpack("B", pkt[3:4])
             if sub_event != EVT_LE_ADVERTISING_REPORT:
                 if debug:
                     print("Not a EVT_LE_ADVERTISING_REPORT !")
@@ -324,8 +340,10 @@ def parse_le_advertising_events(sock, mac_addr=None, packet_length=None,
             if packet_length and plen != packet_length:
                 # ignore this packet
                 if debug:
-                    print("packet with non-matching length: mac=%s adv_type=%02x plen=%s" %
-                          (mac_addr_str, adv_type, plen))
+                    print(
+                        "packet with non-matching length: mac=%s adv_type=%02x plen=%s"
+                        % (mac_addr_str, adv_type, plen)
+                    )
                     print(raw_packet_to_str(pkt))
                 continue
 
@@ -334,24 +352,33 @@ def parse_le_advertising_events(sock, mac_addr=None, packet_length=None,
 
             if mac_addr and mac_addr_str not in mac_addr:
                 if debug:
-                    print("packet with non-matching mac %s adv_type=%02x data=%s RSSI=%s" %
-                          (mac_addr_str, adv_type, raw_packet_to_str(data), rssi))
+                    print(
+                        "packet with non-matching mac %s adv_type=%02x data=%s RSSI=%s"
+                        % (mac_addr_str, adv_type, raw_packet_to_str(data), rssi)
+                    )
                 continue
 
             if debug:
-                print("LE advertisement: mac=%s adv_type=%02x data=%s RSSI=%d" %
-                      (mac_addr_str, adv_type, raw_packet_to_str(data), rssi))
+                print(
+                    "LE advertisement: mac=%s adv_type=%02x data=%s RSSI=%d"
+                    % (mac_addr_str, adv_type, raw_packet_to_str(data), rssi)
+                )
 
             if handler is not None:
                 try:
                     handler(mac_addr_str, adv_type, data, rssi)
                 except Exception as e:
-                    print('Exception when calling handler with a BLE advertising event: %r' % (e,))
+                    print(
+                        "Exception when calling handler with a BLE advertising event: %r"
+                        % (e,)
+                    )
+                    raise
 
     except KeyboardInterrupt:
         print("\nRestore previous socket filter")
         sock.setsockopt(bluez.SOL_HCI, bluez.HCI_FILTER, old_filter)
         raise
+
 
 """
 def hci_le_add_white_list(int dd, const bdaddr_t *bdaddr, uint8_t type, int to)

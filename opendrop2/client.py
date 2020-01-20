@@ -23,6 +23,7 @@ import ipaddress
 import logging
 import os
 import io
+
 import libarchive
 import platform
 import plistlib
@@ -36,7 +37,6 @@ logger = logging.getLogger(__name__)
 
 
 class AirDropBrowser:
-
     def __init__(self, config):
         self.legacy_mode = config.legacy
         if self.legacy_mode:
@@ -45,15 +45,23 @@ class AirDropBrowser:
             self.useIPv6 = True
         self.ip_interface_name = config.interface
 
-        self.ip_addr, self.byte_address = AirDropUtil.get_ip_for_interface(self.ip_interface_name, ipv6=self.useIPv6)
+        self.ip_addr, self.byte_address = AirDropUtil.get_ip_for_interface(
+            self.ip_interface_name, ipv6=self.useIPv6
+        )
 
         if self.ip_addr is None:
-            raise RuntimeError('Interface {} does not have IP(v6) address'.format(self.ip_interface_name))
+            raise RuntimeError(
+                'Interface {} does not have IP(v6) address'.format(
+                    self.ip_interface_name
+                )
+            )
 
         if self.legacy_mode:
             self.zeroconf = Zeroconf()
         else:
-            self.zeroconf = Zeroconf(interfaces=[self.ip_addr], ipv6_interface_name=self.ip_interface_name)
+            self.zeroconf = Zeroconf(
+                interfaces=[self.ip_addr], ipv6_interface_name=self.ip_interface_name
+            )
 
         self.callback_add = None
         self.callback_remove = None
@@ -88,7 +96,6 @@ class AirDropBrowser:
 
 
 class AirDropClient:
-
     def __init__(self, config, receiver):
         self.config = config
         self.receiver_host = receiver[0]
@@ -98,7 +105,9 @@ class AirDropClient:
     def send_POST(self, url, body, headers=None):
         logger.debug('Send {} request'.format(url))
 
-        AirDropUtil.write_debug(self.config, body, 'send_{}_request.plist'.format(url.lower().strip('/')))
+        AirDropUtil.write_debug(
+            self.config, body, 'send_{}_request.plist'.format(url.lower().strip('/'))
+        )
 
         _headers = self._get_headers()
         if headers is not None:
@@ -106,14 +115,21 @@ class AirDropClient:
                 _headers[key] = val
         if self.http_conn is None:
             # Use single connection
-            self.http_conn = HTTPSConnectionAWDL(self.receiver_host, self.receiver_port,
-                                                 interface_name=self.config.interface,
-                                                 context=self.config.get_ssl_context())
+            self.http_conn = HTTPSConnectionAWDL(
+                self.receiver_host,
+                self.receiver_port,
+                interface_name=self.config.interface,
+                context=self.config.get_ssl_context(),
+            )
         self.http_conn.request('POST', url, body=body, headers=_headers)
         http_resp = self.http_conn.getresponse()
 
         response_bytes = http_resp.read()
-        AirDropUtil.write_debug(self.config, response_bytes, 'send_{}_response.plist'.format(url.lower().strip('/')))
+        AirDropUtil.write_debug(
+            self.config,
+            response_bytes,
+            'send_{}_response.plist'.format(url.lower().strip('/')),
+        )
 
         if http_resp.status != 200:
             status = False
@@ -171,9 +187,10 @@ class AirDropClient:
                     'FileType': AirDropUtil.get_uti_type(flp),
                     'FileBomPath': os.path.join('.', file_name),
                     'FileIsDirectory': os.path.isdir(file_name),
-                    'ConvertMediaFormats': 0
+                    'ConvertMediaFormats': 0,
                 }
                 yield file_entry
+
         ask_body['Files'] = [e for e in file_entries(file_path)]
         ask_body['Items'] = []
 
@@ -186,14 +203,16 @@ class AirDropClient:
         """
         Send a file to a receiver.
         """
-        headers = {
-            'Content-Type': 'application/x-cpio',
-        }
+        headers = {'Content-Type': 'application/x-cpio'}
 
         # Create archive in memory ...
         stream = io.BytesIO()
-        with libarchive.custom_writer(stream.write, 'cpio', filter_name='gzip',
-                                      archive_write_class=AbsArchiveWrite) as archive:
+        with libarchive.custom_writer(
+            stream.write,
+            'cpio',
+            filter_name='gzip',
+            archive_write_class=AbsArchiveWrite,
+        ) as archive:
             for f in [file_path]:
                 ff = os.path.basename(f)
                 archive.add_abs_file(f, os.path.join('.', ff))
@@ -216,7 +235,7 @@ class AirDropClient:
             'Accept': '*/*',
             'User-Agent': 'AirDrop/1.0',
             'Accept-Language': 'en-us',
-            'Accept-Encoding': 'br, gzip, deflate'
+            'Accept-Encoding': 'br, gzip, deflate',
         }
         return headers
 
@@ -226,8 +245,19 @@ class HTTPSConnectionAWDL(http.client.HTTPSConnection):
     This class allows to bind the HTTPConnection to a specific network interface
     """
 
-    def __init__(self, host, port=None, key_file=None, cert_file=None, timeout=None, source_address=None,
-                 *, context=None, check_hostname=None, interface_name=None):
+    def __init__(
+        self,
+        host,
+        port=None,
+        key_file=None,
+        cert_file=None,
+        timeout=None,
+        source_address=None,
+        *,
+        context=None,
+        check_hostname=None,
+        interface_name=None
+    ):
 
         if interface_name is not None:
             if '%' not in host:
@@ -237,14 +267,23 @@ class HTTPSConnectionAWDL(http.client.HTTPSConnection):
         if timeout is None:
             timeout = socket.getdefaulttimeout()
 
-        super(HTTPSConnectionAWDL, self).__init__(host=host, port=port, key_file=key_file, cert_file=cert_file,
-                                                  timeout=timeout, source_address=source_address, context=context,
-                                                  check_hostname=check_hostname)
+        super(HTTPSConnectionAWDL, self).__init__(
+            host=host,
+            port=port,
+            key_file=key_file,
+            cert_file=cert_file,
+            timeout=timeout,
+            source_address=source_address,
+            context=context,
+            check_hostname=check_hostname,
+        )
 
         self.interface_name = interface_name
         self._create_connection = self.create_connection_awdl
 
-    def create_connection_awdl(self, address, timeout=socket.getdefaulttimeout(), source_address=None):
+    def create_connection_awdl(
+        self, address, timeout=socket.getdefaulttimeout(), source_address=None
+    ):
         """Connect to *address* and return the socket object.
 
         Convenience function.  Connect to *address* (a 2-tuple ``(host,

